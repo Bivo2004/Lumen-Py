@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="lumen-py",
-    version="1.0.0",
+    version="1.0.2", # The "Bug Fix" release
     description="An AI-powered, local, Object-Oriented coding mentor.",
     author="Bivo",
     # We list the individual files that make up your tool

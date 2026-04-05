@@ -1,38 +1,46 @@
-from llm_handler import LocalAIHandler
+# visualizer.py
+import re
 
 class MermaidVisualizer:
-    """
-    Translates architectural concepts or Python code into Mermaid.js diagram strings.
-    """
-    def __init__(self, ai_handler: LocalAIHandler):
+    def __init__(self, ai_handler):
         self.ai_handler = ai_handler
         self._system_prompt = (
-            "You are an expert Software Architect. Your ONLY job is to generate "
-            "valid Mermaid.js diagram code. "
-            "DO NOT include any conversational text, explanations, or Markdown formatting. "
-            "Return strictly the raw Mermaid syntax.\n\n"
-            "CRITICAL SYNTAX RULES:\n"
-            "1. For Concepts/Flows: Use `graph TD`. Define nodes: `A[\"Name\"]` and links: `A -->|label| B`.\n"
-            "2. For OOP Classes: Use `classDiagram`. Define classes: `class Car { +start() }` and links: `Car --> Engine : contains`.\n"
-            "3. NEVER mix flowchart syntax (`graph`) with OOP syntax (`classDiagram`)."
+            "You are a strict Mermaid.js architect. "
+            "Rules:\n"
+            "1. Start ONLY with 'graph TD'.\n"
+            "2. Use ONLY single-letter IDs (A, B, C) for nodes.\n"
+            "3. Format: A[Label Text] --> B[Label Text]\n"
+            "4. One arrow per line.\n"
+            "5. NO markdown (```), NO talk, ONLY code."
         )
 
-    def generate_class_diagram(self, concept_or_code: str) -> str:
-        """
-        Generates a UML class diagram based on a concept or code snippet.
-        """
-        prompt = (
-            f"Generate the most appropriate Mermaid diagram (either `graph TD` for concepts or `classDiagram` for strict code) "
-            f"for the following:\n\n{concept_or_code}"
-        )
+    def generate_class_diagram(self, concept: str) -> str:
+        prompt = f"Draw a hierarchy for: {concept}"
         
-        # We pass our strict system prompt to the handler
         raw_mermaid = self.ai_handler.generate_response(
-            prompt=prompt, 
+            prompt=prompt,
             system_prompt=self._system_prompt
         )
+
+        # --- THE CLEANING PIPELINE ---
         
-        # Safety filter to remove accidental markdown blocks
-        clean_mermaid = raw_mermaid.replace("```mermaid", "").replace("```", "").strip()
+        # 1. Strip markdown backticks
+        clean = raw_mermaid.replace("```mermaid", "").replace("```", "").strip()
         
-        return clean_mermaid
+        # 2. Fix the 'Sticky Header'
+        if clean.startswith("graphTD"):
+            clean = clean.replace("graphTD", "graph TD\n", 1)
+        
+        # 3. THE SPACE KILLER (Regex)
+        # This looks for any text BEFORE a '[' and removes spaces from it.
+        # Example: 'Machine Learning[Label]' becomes 'MachineLearning[Label]'
+        def fix_ids(match):
+            return match.group(0).replace(" ", "")
+            
+        clean = re.sub(r'[^ \n\-\>]+(?=\[)', fix_ids, clean)
+        
+        # 4. Ensure it starts with graph TD
+        if not clean.startswith("graph"):
+            clean = "graph TD\n" + clean
+             
+        return clean
