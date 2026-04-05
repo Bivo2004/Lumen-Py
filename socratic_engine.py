@@ -1,49 +1,68 @@
-from abc import ABC, abstractmethod
-from llm_handler import LocalAIHandler
+class SocraticStrategy:
+    def __init__(self, mode: str = "mentor"):
+        self.mode = mode.lower()
 
-# --- 1. The Strategy Interface ---
-class TutorStrategy(ABC):
-    """Abstract base class defining a tutoring strategy."""
-    
-    @abstractmethod
     def get_system_prompt(self) -> str:
-        pass
+        if self.mode == "strict":
+            return (
+                "You are a strict Socratic coding mentor. "
+                "NEVER give the user direct code solutions. "
+                "Always respond with a guiding question to make them think."
+            )
+        elif self.mode == "direct":
+            return (
+                "You are a helpful Senior Software Engineer. "
+                "Provide the direct answer, including the exact code needed. "
+                "Keep your explanations concise, professional, and clear."
+            )
+        else: # Default Mentor mode
+            return (
+                "You are a balanced AI coding mentor. "
+                "If the user asks a conceptual question, explain it clearly. "
+                "If they are stuck on code, provide partial snippets or pseudo-code to help, "
+                "but do not write the entire script for them unless they specifically ask. "
+                "Be encouraging and direct."
+            )
 
-# --- 2. Concrete Strategy ---
-class SocraticStrategy(TutorStrategy):
-    """A strict strategy that refuses to write code and only asks guiding questions."""
-    
-    def get_system_prompt(self) -> str:
-        return (
-            "You are Lumen, an expert Python Architect and strict Socratic tutor. "
-            "YOUR PRIME DIRECTIVE: NEVER write code for the user. EVER. "
-            "If the user asks for code, refuse politely. Instead, identify the core "
-            "concept they are struggling with and ask ONE guiding question to help them "
-            "figure it out themselves. Keep your responses short, analytical, and encouraging."
-        )
-
-# --- 3. The Context (Engine) ---
 class SocraticEngine:
-    """
-    The main engine that uses a TutorStrategy and the LocalAIHandler 
-    to process user requests.
-    """
-    def __init__(self, ai_handler: LocalAIHandler, strategy: TutorStrategy):
+    def __init__(self, ai_handler, mode="mentor"):
         self.ai_handler = ai_handler
-        self.strategy = strategy
+        self.strategy = SocraticStrategy(mode)
+        self.history = []  # <-- NEW: The Memory Bank
 
-    def set_strategy(self, strategy: TutorStrategy):
-        """Allows swapping the tutoring style at runtime."""
-        self.strategy = strategy
+    def ask_tutor(self, prompt: str) -> str:
+        # Add user prompt to memory
+        self.history.append(f"User: {prompt}")
+        
+        # Keep only the last 6 messages so the context window doesn't overflow
+        if len(self.history) > 6:
+            self.history = self.history[-6:]
+            
+        history_text = "\n".join(self.history)
+        full_prompt = f"{self.strategy.get_system_prompt()}\n\n{history_text}\nLumen:"
+        
+        response = self.ai_handler.generate_response(full_prompt)
+        
+        # Save Lumen's answer to memory
+        self.history.append(f"Lumen: {response}")
+        return response
 
-    def ask_tutor(self, user_input: str) -> str:
-        """Processes the user input through the current strategy."""
-        system_prompt = self.strategy.get_system_prompt()
-        return self.ai_handler.generate_response(
-            prompt=user_input, 
-            system_prompt=system_prompt
-        )
     def ask_tutor_stream(self, prompt: str):
-        """Passes the system prompt and yields the streamed response."""
-        full_prompt = f"{self.strategy.get_system_prompt()}\n\nUser: {prompt}\nLumen:"
-        return self.ai_handler.generate_stream(full_prompt)
+        # Add user prompt to memory
+        self.history.append(f"User: {prompt}")
+        
+        # Keep only the last 6 messages
+        if len(self.history) > 6:
+            self.history = self.history[-6:]
+            
+        history_text = "\n".join(self.history)
+        full_prompt = f"{self.strategy.get_system_prompt()}\n\n{history_text}\nLumen:"
+        
+        response_buffer = ""
+        # Stream the response back to the user, but also save it locally
+        for chunk in self.ai_handler.generate_stream(full_prompt):
+            response_buffer += chunk
+            yield chunk
+            
+        # Save Lumen's final answer into the memory bank
+        self.history.append(f"Lumen: {response_buffer}")
