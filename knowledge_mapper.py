@@ -26,6 +26,6 @@ class CodeLevelClassifier:
         if not self._is_trained:
             raise RuntimeError("Classifier must be trained before predicting.")
         
-        # Vectorize the new snippet and predict
+        
         X_new = self.vectorizer.transform([code_snippet])
         return self.classifier.predict(X_new)[0]

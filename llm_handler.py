@@ -1,31 +1,26 @@
-import ollama
-from typing import List, Dict, Optional
+import requests
+import json
 
 class LocalAIHandler:
-    """
-    Handles communication with the local Ollama instance.
-    Encapsulates the connection to adhere to the Single Responsibility Principle.
-    """
-    
     def __init__(self, model_name: str = "llama3"):
-        self._model_name = model_name
+        self.model_name = model_name
+        self.url = "http://localhost:11434/api/generate"
 
-    def generate_response(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        """
-        Sends a prompt to the local model and returns the response string.
-        """
-        messages: List[Dict[str, str]] = []
-        
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-            
-        messages.append({"role": "user", "content": prompt})
+    def generate_response(self, prompt: str) -> str:
+        """The old method: waits for the full response."""
+        payload = {"model": self.model_name, "prompt": prompt, "stream": False}
+        response = requests.post(self.url, json=payload)
+        return response.json().get("response", "")
 
+    def generate_stream(self, prompt: str):
+        """The new method: streams the response token by token."""
+        payload = {"model": self.model_name, "prompt": prompt, "stream": True}
         try:
-            # Synchronous call to the local Ollama daemon
-            response = ollama.chat(model=self._model_name, messages=messages)
-            return response.get('message', {}).get('content', "")
-            
+            with requests.post(self.url, json=payload, stream=True) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if line:
+                        data = json.loads(line.decode('utf-8'))
+                        yield data.get("response", "")
         except Exception as e:
-            return f"[System Error] Failed to communicate with Ollama: {e}\n" \
-                   f"Please ensure the Ollama application is running."
+            yield f"\n[Error communicating with local AI: {e}]"

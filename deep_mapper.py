@@ -11,7 +11,7 @@ class CodeLevelNN(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),           
-            # We lowered dropout slightly since we are using smaller datasets
+            
             nn.Dropout(0.2),     
             nn.Linear(hidden_dim, 2) 
         )
@@ -28,11 +28,11 @@ class DeepKnowledgeMapper:
         self.codebert = RobertaModel.from_pretrained("microsoft/codebert-base").to(self.device)
         self.weights_path = "lumen_brain.pth"
         
-        # Freeze all CodeBERT parameters
+        
         for param in self.codebert.parameters():
             param.requires_grad = False
             
-        # Unfreeze the last 2 layers of the encoder
+        
         for param in self.codebert.encoder.layer[-2:].parameters():
             param.requires_grad = True
 
@@ -53,8 +53,7 @@ class DeepKnowledgeMapper:
         input_ids = tokens['input_ids'].to(self.device)
         attention_mask = tokens['attention_mask'].to(self.device)
 
-        # Removed torch.no_grad() to allow gradients to flow through if called during training.
-        # Note: the predict method handles torch.no_grad() for inference.
+        
         outputs = self.codebert(input_ids=input_ids, attention_mask=attention_mask)
             
         return outputs.last_hidden_state[:, 0, :]

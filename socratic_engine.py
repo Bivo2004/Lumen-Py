@@ -43,3 +43,7 @@ class SocraticEngine:
             prompt=user_input, 
             system_prompt=system_prompt
         )
+    def ask_tutor_stream(self, prompt: str):
+        """Passes the system prompt and yields the streamed response."""
+        full_prompt = f"{self.strategy.get_system_prompt()}\n\nUser: {prompt}\nLumen:"
+        return self.ai_handler.generate_stream(full_prompt)

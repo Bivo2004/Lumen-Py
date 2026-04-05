@@ -4,7 +4,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from pathlib import Path
-
+from rich.live import Live
 from llm_handler import LocalAIHandler
 from socratic_engine import SocraticEngine, SocraticStrategy
 from visualizer import MermaidVisualizer
@@ -47,58 +47,92 @@ def start(model: str = typer.Option("llama3", help="The Ollama model to use.")):
                 console.print("[dim]Just go to https://mermaid.live and press Ctrl+V / Cmd+V[/dim]")
                 continue
 
-            with console.status("[bold yellow]Lumen is thinking...", spinner="dots"):
-                response = engine.ask_tutor(user_input)
-            
             console.print("\n[bold green]Lumen:[/bold green]")
-            console.print(Markdown(response))
+            full_response = ""
+            # The Live display updates the Markdown rendering in real-time
+            with Live(Markdown(""), console=console, refresh_per_second=15) as live:
+                for chunk in engine.ask_tutor_stream(user_input):
+                    full_response += chunk
+                    live.update(Markdown(full_response))
 
         except KeyboardInterrupt:
             console.print("\n[bold green]Lumen:[/bold green] Session terminated. Goodbye!")
             break
 
-# --- THE NEW CODE REVIEWER COMMAND ---
+
 @app.command()
-def review(file_path: Path, model: str = typer.Option("llama3", help="The Ollama model to use.")):
+def review(target_path: Path, model: str = typer.Option("llama3", help="The Ollama model to use.")):
     """
-    Review a Python file and initiate a Socratic mentoring session.
+    Review a single Python file OR an entire project directory.
     """
-    if not file_path.is_file():
-        console.print(f"[bold red]Error:[/bold red] Could not find file at {file_path}")
+    if not target_path.exists():
+        console.print(f"[bold red]Error:[/bold red] Could not find {target_path}")
         raise typer.Exit()
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        code_content = f.read()
-
-    console.print(Panel.fit(f"[bold green]Lumen-Py Code Reviewer[/bold green]\nAnalyzing: {file_path.name}", border_style="green"))
+    # --- THE SYSTEM SCANNER ---
+    code_content = ""
+    file_count = 0
     
-    with console.status("[bold cyan]Booting neural engines and loading CodeBERT (This takes a moment)...", spinner="dots"):
+    with console.status("[bold cyan]Scanning file system...", spinner="dots"):
+        if target_path.is_file():
+            # Single file logic
+            with open(target_path, "r", encoding="utf-8") as f:
+                code_content = f"--- FILE: {target_path.name} ---\n{f.read()}\n\n"
+            file_count = 1
+            console.print(Panel.fit(f"[bold green]Lumen Code Reviewer[/bold green]\nAnalyzing File: {target_path.name}", border_style="green"))
+            
+        elif target_path.is_dir():
+            # Directory logic: Crawl the folder
+            console.print(Panel.fit(f"[bold green]Lumen System Architect[/bold green]\nAnalyzing Project: {target_path.name}/", border_style="green"))
+            
+            # Define folders to ignore
+            ignore_dirs = {".venv", "venv", "env", "__pycache__", ".git", "build", "dist"}
+            
+            for filepath in target_path.rglob("*.py"):
+                # Skip ignored directories
+                if any(ignored in filepath.parts for ignored in ignore_dirs):
+                    continue
+                    
+                with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                    code_content += f"--- FILE: {filepath.name} ---\n{f.read()}\n\n"
+                file_count += 1
+                
+        if file_count == 0:
+            console.print("[bold red]Error:[/bold red] No valid Python files found.")
+            raise typer.Exit()
+
+    console.print(f"[dim]Successfully loaded {file_count} file(s) into memory.[/dim]\n")
+
+    # --- THE REVIEW PIPELINE ---
+    with console.status("[bold cyan]Booting neural engines and loading CodeBERT...", spinner="dots"):
         handler = LocalAIHandler(model_name=model)
         mapper = DeepKnowledgeMapper()
         
-    with console.status("[bold yellow]Analyzing code architecture...", spinner="dots"):
-        # The ML Brain makes its prediction
-        level = mapper.predict(code_content)
+    with console.status("[bold yellow]Analyzing system architecture...", spinner="dots"):
         
-    console.print(f"[bold blue]Architectural Maturity Detected:[/bold blue] {level} Level\n")
+        level = mapper.predict(code_content[:2000]) 
+        
+    console.print(f"[bold blue]Overall Architectural Maturity:[/bold blue] {level} Level\n")
 
-    # Boot the Socratic Engine
     strategy = SocraticStrategy()
     engine = SocraticEngine(ai_handler=handler, strategy=strategy)
     
-    # We construct a hidden prompt that combines the code, the ML prediction, and Socratic instructions
     hidden_prompt = (
-        f"I have written the Python code below. Your ML model classified my architecture "
-        f"as {level}-level. Review it as a strict Socratic tutor. Do NOT give me the answers or rewrite "
-        f"the code. Ask me exactly ONE targeted question to help me improve its architecture.\n\n"
-        f"CODE:\n{code_content}"
+        f"I have provided the code for a Python project below. Your ML model classified the overall architecture "
+        f"as {level}-level. Review it as a strict Socratic software architect. Do NOT rewrite "
+        f"the code. Look at how the files interact. Ask me exactly ONE targeted question about my project's "
+        f"design patterns, separation of concerns, or scalability.\n\n"
+        f"PROJECT CODE:\n{code_content}"
     )
     
-    with console.status("[bold yellow]Lumen is reading your code...", spinner="dots"):
-        response = engine.ask_tutor(hidden_prompt)
-        
-    console.print("[bold green]Lumen:[/bold green]")
-    console.print(Markdown(response))
-
+    
+    console.print("\n[bold green]Lumen:[/bold green]")
+    full_response = ""
+    
+    # The Live display updates the Markdown rendering in real-time
+    with Live(Markdown(""), console=console, refresh_per_second=15) as live:
+        for chunk in engine.ask_tutor_stream(hidden_prompt):
+            full_response += chunk
+            live.update(Markdown(full_response))
 if __name__ == "__main__":
     app()
