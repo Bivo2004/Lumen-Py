@@ -13,19 +13,19 @@ Instead of writing the code for you and making you dependent, Lumen-Py uses a lo
 
 ## ⚙️ Installation & Setup
 
-**1. Clone the repository:**
+1. **Clone the repository:**
 ```bash
-git clone [https://github.com/Bivo2004/Lumen-Py.git](https://github.com/Bivo2004/Lumen-Py.git)
+git clone https://github.com/Bivo2004/Lumen-Py.git
 cd Lumen-Py
 ```
 
-**2. Install the Python dependencies:**
+2. **Install the dependencies:**
 ```bash
-pip install torch transformers datasets typer rich pyperclip requests
+pip install torch transformers datasets typer rich pyperclip
 ```
 
-**3. Install Ollama:**
-Ensure you have [Ollama](https://ollama.com/) installed and running locally on your machine with your preferred model (the default for this tool is `llama3`).
+3. **Install Ollama:**
+Ensure you have [Ollama](https://ollama.com/) installed and running locally with your preferred model (the default for this tool is `llama3`).
 
 ## 🧠 Training the Brain (Required First Step)
 To keep the GitHub repository fast and lightweight, the compiled neural network weights (`lumen_brain.pth`) are ignored by Git. **You must train the PyTorch brain locally before running a code review.**
@@ -62,5 +62,5 @@ python main.py review path/to/your/project_folder/
 ## 🏗️ Architecture & Stack
 * **Language:** Python 3
 * **Deep Learning:** PyTorch, Hugging Face Transformers (`microsoft/codebert-base`), Datasets
-* **CLI & UI:** Typer, Rich (with Live Token Streaming)
-* **LLM Integration:** Ollama (Local/Offline)
+* **CLI & UI:** Typer, Rich
+* **LLM Integration:** Ollama
