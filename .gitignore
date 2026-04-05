@@ -1,0 +1,24 @@
+# --- ADDITIONS ---
+lumen_brain.pth
+__pycache__/
+*.pyc
+.venv/
+venv/
+# VS Code specific
+.vscode/
+
+# Distribution / Packaging
+dist/
+build/
+*.egg-info/
+
+# PyTorch & Large Model Weights (Wildcards)
+*.pth
+*.pt
+*.bin
+*.safetensors
+checkpoint/
+
+# Local logs/Temporary files
+*.log
+tmp/
