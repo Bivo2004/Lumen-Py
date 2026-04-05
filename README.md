@@ -1,4 +1,3 @@
-```markdown
 # Lumen-Py 🧠
 
 An AI-powered, local, Object-Oriented coding mentor that actively fights "AI Brain Rot." 
@@ -13,18 +12,18 @@ Instead of writing the code for you, Lumen-Py uses a fine-tuned PyTorch Deep Lea
 ## ⚙️ Installation & Setup
 
 1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/Bivo2004/Lumen-Py.git](https://github.com/Bivo2004/Lumen-Py.git)
-   cd Lumen-Py
-   ```
+```bash
+git clone https://github.com/Bivo2004/Lumen-Py.git
+cd Lumen-Py
+```
 
 2. **Install the dependencies:**
-   ```bash
-   pip install torch transformers datasets typer rich pyperclip
-   ```
+```bash
+pip install torch transformers datasets typer rich pyperclip
+```
 
 3. **Install Ollama:**
-   Ensure you have [Ollama](https://ollama.com/) installed and running locally with your preferred model (the default for this tool is `llama3`).
+Ensure you have [Ollama](https://ollama.com/) installed and running locally with your preferred model (the default for this tool is `llama3`).
 
 ## 🧠 Training the Brain (Required First Step)
 To keep the GitHub repository lightweight and fast, the compiled neural network weights (`lumen_brain.pth`) are ignored by Git. **You must train the brain locally before running a code review.**
@@ -55,4 +54,3 @@ python main.py review path/to/your/script.py
 * **Deep Learning:** PyTorch, Hugging Face Transformers (`microsoft/codebert-base`), Datasets
 * **CLI & UI:** Typer, Rich
 * **LLM Integration:** Ollama
-```
